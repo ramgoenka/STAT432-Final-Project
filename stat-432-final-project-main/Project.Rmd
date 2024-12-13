@@ -1,0 +1,277 @@
+---
+title: "Models Final Project"
+author: "Ayana"
+date: "2024-12-12"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Spectral Clustering
+
+```{r}
+library(kernlab)
+library(dplyr)
+
+data = read.csv("processed_used_cars.csv")
+head(data)
+```
+Let us consider spectral clustering on the most relevant numerical variables available to us, to try and find some thresholds with which to cluster the data. 
+
+```{r}
+selected_features = data[, c("Horsepower", "Engine_Size", "Mileage", "Price")]
+```
+We decide to use the Eigengap heuristic to try and determine the ideal number of clusters. 
+```{r}
+similarity_matrix = exp(-dist(scale(selected_features))^2 / 2)
+laplacian = diag(rowSums(as.matrix(similarity_matrix))) - as.matrix(similarity_matrix)
+eigen_decomp = eigen(laplacian)
+eigenvalues = sort(eigen_decomp$values)
+
+max_eigenvalues = 10  
+plot(eigenvalues[1:max_eigenvalues], type = "b", xlab = "Index", ylab = "Eigenvalue", 
+     main = "Limited Eigenvalue Gap", ylim = c(0, max(eigenvalues[1:max_eigenvalues])))
+```
+By looking for the largest eigenvalue gap in this graph to help decide the optimal number of centers, we see the "biggest" jump happens from 8  to 9. However, even starting at 5 centers, the clusters start to become too granular to be meaningful, so, we take the slight shift from 4 to 5, and take k = 4 as our number of clusters.
+
+```{r}
+spectral = specc(as.matrix(selected_features), centers = 4)
+```
+
+```{r}
+data$cluster = spectral@.Data
+cluster_summary = aggregate(selected_features, by = list(Cluster = data$cluster), FUN = mean)
+print(cluster_summary)
+```
+```{r}
+library(factoextra)
+fviz_cluster(list(data = selected_features, cluster = spectral), geom = "point")
+```
+We end up with 4 clusters, most distinctly characterized by how they split up price and mileage, leading us to believe that there is a significant relationship between those two variables, since as the mean price increases in the clusters, the mean mileage decreases. 
+
+```{r}
+cluster_counts = table(data$cluster)
+print(cluster_counts)
+
+```
+
+```{r}
+cluster_price_summary = data %>%
+  group_by(cluster) %>%
+  summarise(
+    Mean_Price = mean(Price, na.rm = TRUE),
+    Median_Price = median(Price, na.rm = TRUE),
+    SD_Price = sd(Price, na.rm = TRUE)
+  )
+
+print(cluster_price_summary)
+```
+```{r}
+cluster_mileage_summary = data %>%
+  group_by(cluster) %>%
+  summarise(
+    Mean_Mileage = mean(Mileage, na.rm = TRUE),
+    Median_Mileage = median(Mileage, na.rm = TRUE),
+    SD_Mileage = sd(Mileage, na.rm = TRUE)
+  )
+
+print(cluster_mileage_summary)
+```
+
+Of our 4 clusters, the largest is cluster 3, and the smallest is cluster 2, with 1 and 4 in the middle. 
+
+As we can see in our summaries:
+
+Cluster 4 has the lowest mean price, followed by cluster 1. Cluster 3 involves a mid-range mean price, which is intuitive, since it has the largest amount of observations within it. 2, what we know as the smallest cluster, also has the highest mean price.
+
+Similarly, the mileage clusters follow the opposite trend with 2 < 3 < 1 < 4. Intuitively, this makes sense, since used cars with high mileage tend to be cheaper. 
+
+We also notice a as Horsepower and Engine Size increase, Price also increases. This is not as strong as the relationship as mileage and price, but the upward trend does exist, and the effect is especially apparent in cluster 2, which has a much higher horsepower and engine size compared to the other clusters. 
+
+
+# Predictive models 
+
+## Regression Tree
+
+We can also try to use a regression tree, which is useful for its interpretability. While the prediciton of tree models in this simple context tends to be not ideal, we would also like to first display this core component of random forests and boosting before turning our attention to these methods. 
+
+So, first, we split our data into testing and training. Then, we fit our tree model. The set of variables we use were chosen because they were easily branchable, and were interpretable in the tree format. Things like the brand and model were ommitted, because they obscured the relationship of price to most variables in favor of granular results. 
+
+```{r}
+set.seed(432)
+library(rpart)
+library(tree)
+library(rpart.plot)
+
+data = read.csv("processed_used_cars.csv")
+
+train_indices = sample(x = 1:dim(data)[1], size = floor(0.75*dim(data)[1]))
+train = data[train_indices,]
+test = data[-train_indices,]
+
+
+tree_model = rpart(Price ~ Horsepower + Mileage + fuel_type + model_year + Cylinders + Engine_Size , data = train)
+prp(tree_model)
+```
+Now that we have our tree, we see if we can prune it. We use cost-complexity pruning. 
+
+```{r}
+cptable = tree_model$cptable
+```
+
+```{r}
+pruned_tree = prune(tree_model, cp = sqrt(cptable[7,1]*cptable[8,1]))
+prp(pruned_tree)
+```
+This is the pruned tree we obtain. 
+
+```{r}
+predictions = predict(pruned_tree, new_data = train)
+rmse = sqrt(mean((predictions - train$Price)^2))
+cat("RMSE:", rmse, "\n")
+```
+
+```{r}
+predictions = predict(pruned_tree, new_data = test)
+rmse = sqrt(mean((predictions - test$Price)^2))
+cat("RMSE:", rmse, "\n")
+```
+
+
+```{r}
+predictions = predict(pruned_tree, newdata = test)
+
+y_true <- test$Price
+rss <- sum((y_true - predictions)^2)
+tss <- sum((y_true - mean(y_true))^2)
+
+r_squared <- 1 - (rss / tss)
+
+r_squared
+```
+
+```{r}
+predictions = predict(pruned_tree, newdata = train)
+
+y_true <- train$Price
+rss <- sum((y_true - predictions)^2)
+tss <- sum((y_true - mean(y_true))^2)
+
+r_squared <- 1 - (rss / tss)
+
+r_squared
+```
+It has a Train RMSE of 52239.94, a Test RMSE of 116305.3, a Train Rsquared of 0.349807 and a Test Rsquared
+0.1610819. Very clearly, the regression tree was not able to capture the complexity of our data, so, we should delve further into techniques to try and rectify this.
+
+## XGBoost
+
+```{r}
+
+data = read.csv("processed_used_cars.csv")
+model <- lm(Price ~ ., data = data)
+cooks_dist <- cooks.distance(model)
+
+plot(cooks_dist, main = "Cook's Distance", type = "h", ylab = "Cook's Distance")
+abline(h = 4 / nrow(data), col = "red", lty = 2) 
+threshold <- 4 / nrow(data)
+
+influential_points <- which(cooks_dist > threshold)
+
+# Remove influential points
+data_cleaned <- data[-influential_points, ]
+
+par(mfrow = c(1, 2))  # Plot side-by-side
+boxplot(data$Price, main = "Original Price Data", horizontal = TRUE)
+boxplot(data_cleaned$Price, main = "Cleaned Price Data", horizontal = TRUE)
+
+```
+
+
+```{r}
+set.seed(432)
+library(xgboost)
+categorical_columns = c("brand", "model", "fuel_type", "transmission", "ext_col", "int_col", "accident", "clean_title")
+for (col in categorical_columns) {
+    data_cleaned[[col]] = as.numeric(as.factor(data_cleaned[[col]]))
+}
+
+
+train_indices = sample(x = 1:dim(data_cleaned)[1], size = floor(0.75*dim(data_cleaned)[1]))
+train = data_cleaned[train_indices,]
+test = data_cleaned[-train_indices,]
+
+train_y = train$Price
+test_y = test$Price
+
+train_X = as.matrix(train[, !names(train) %in% c("Price")])
+test_X = as.matrix(test[, !names(test) %in% c("Price")])
+
+dtrain = xgb.DMatrix(data = train_X, label = train_y)
+dtest = xgb.DMatrix(data = test_X, label = test_y)
+```
+
+
+```{r}
+set.seed(432)
+params <- list(
+    booster = "gbtree",
+    objective = "reg:squarederror",
+    eta = 0.1,                    
+    max_depth = 7,
+    subsample = 0.8,
+    colsample_bytree = 0.8
+)
+
+xgb_model = xgb.train(
+    params = params,
+    data = dtrain,
+    nrounds = 500,
+    watchlist = list(train = dtrain, test = dtest),
+    print_every_n = 10,
+    early_stopping_rounds = 10
+)
+
+importance_matrix <- xgb.importance(feature_names = colnames(train_X), model = xgb_model)
+xgb.plot.importance(importance_matrix)
+```
+
+```{r}
+train_pred <- predict(xgb_model, dtrain)
+test_pred <- predict(xgb_model, dtest)
+rmse <- function(actual, predicted) {
+  sqrt(mean((actual - predicted)^2))
+}
+
+# Calculate RMSE
+train_rmse <- rmse(train_y, train_pred)
+test_rmse <- rmse(test_y, test_pred)
+
+cat("Train RMSE:", train_rmse, "\n")
+cat("Test RMSE:", test_rmse, "\n")
+
+```
+
+```{r}
+rsquared <- function(actual, predicted) {
+  1 - (sum((actual - predicted)^2) / sum((actual - mean(actual))^2))
+}
+
+# Calculate R-squared
+train_r2 <- rsquared(train_y, train_pred)
+test_r2 <- rsquared(test_y, test_pred)
+
+cat("Train R-squared:", train_r2, "\n")
+cat("Test R-squared:", test_r2, "\n")
+
+```
+Performance Summary:
+
+Train RMSE: 4512.37 
+Test RMSE: 18855.19 
+Train R-squared: 0.9957478 
+Test R-squared: 0.7905327 
+
+

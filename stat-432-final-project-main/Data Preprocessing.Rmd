@@ -1,0 +1,127 @@
+---
+title: "STAT 432 Project"
+author: "Ayana"
+date: "2024-12-09"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Data Processing 
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+data = read.csv("used_cars.csv")
+head(data)
+```
+```{r}
+data$Horsepower = as.numeric(gsub("HP.*", "", data$engine))
+data$Engine_Size = as.numeric(sub(".*([0-9]\\.[0-9]+)L.*", "\\1", data$engine))
+data$Cylinders = as.numeric(sub(".*([0-9]+) Cylinder.*", "\\1", data$engine))
+data$Mileage = as.numeric(gsub("[,mi.]", "", data$milage))
+data$Price = as.numeric(gsub("[$,]", "", data$price))
+
+head(data)
+```
+```{r}
+data$Engine_Size[is.na(data$Engine_Size)] = mean(data$Engine_Size, na.rm = TRUE)
+data$Horsepower[is.na(data$Horsepower)] = mean(data$Horsepower, na.rm = TRUE)
+mode_cylinders = as.numeric(names(sort(table(data$Cylinders), decreasing = TRUE))[1])
+data$Cylinders[is.na(data$Cylinders)] <- mode_cylinders
+
+
+data$clean_title[data$clean_title == ""] = NA
+data$clean_title[is.na(data$clean_title)] = "No"
+
+data$fuel_type[data$fuel_type == "–"] = NA
+data$fuel_type[data$fuel_type == "not supported"] = NA
+data = data[!is.na(data$fuel_type), ]
+
+data$transmission[data$transmission == "–"] = NA
+data = data[!is.na(data$transmission), ]
+
+data$int_col[data$int_col == "–"] = NA
+data$int_col[is.na(data$int_col)] = "Unknown"
+
+data$price[data$price == ""] = NA
+
+data = data[, !(names(data) %in% c("engine", "milage", "price"))]
+
+head(data)
+```
+We choose the mean for engine size and horsepower because they are both numeric features with a wide range of values, making the mean a reasonable representative measure for the dataset. We use the mode for cylinders because while cylinder count is numeric, the values are discrete and often limited to a small set of options. This makes the mode an intuitive choice.
+
+For clean_title, we choose to replace with "No", since we want to take a cautious approach and assume if there is no information about a clean_title, the car cannot be marketed as such. 
+
+For fuel_type and transmission, we remove the rows with null value since these are variables that impact the data, cannot be replaced with an estimate, and there are relatively few occurences, causing us to lose only 49 rows of data. 
+
+For int_color, we set null values to Unkown, so as to avoid having null values in the data, and take a cautious approach. 
+
+```{r}
+#model = lm(Price ~ brand + model_year + Mileage + fuel_type + Engine_Size + transmission + clean_title + Cylinders + Horsepower + accident, data = data)
+
+#cooks_dist = cooks.distance(model)
+
+#n = length(model$residuals)
+#cutoff = 4/n
+
+#influential_points = which(cooks_dist > cutoff)
+
+#data[influential_points, ]
+#data_clean = data[-influential_points, ]
+#count(data_clean)
+print("TO-DO")
+```
+
+# Summary Statistics
+```{r}
+summary_table = data %>%
+  summarise(
+    Mean_Price = mean(Price, na.rm = TRUE),
+    StdDev_Price = sd(Price, na.rm = TRUE),
+    Min_Price = min(Price, na.rm = TRUE),
+    Max_Price = max(Price, na.rm = TRUE),
+    Missing_Price = mean(is.na(Price)) * 100,
+    
+    Mean_Mileage = mean(Mileage, na.rm = TRUE),
+    StdDev_Mileage = sd(Mileage, na.rm = TRUE),
+    Min_Mileage = min(Mileage, na.rm = TRUE),
+    Max_Mileage = max(Mileage, na.rm = TRUE),
+    Missing_Mileage = mean(is.na(Mileage)) * 100
+  )
+
+print(summary_table)
+```
+```{r}
+fuel_frequency = data %>%
+  group_by(fuel_type) %>%
+  summarise(Count = n()) %>%
+  mutate(Percentage = (Count / sum(Count)) * 100)
+
+print(fuel_frequency)
+```
+
+
+```{r}
+ggplot(data, aes(x = Price)) +
+  geom_histogram(binwidth = 5000, fill = "blue", color = "black") +
+  labs(title = "Price Distribution", x = "Price (USD)", y = "Frequency") +
+  theme_minimal()
+```
+```{r}
+ggplot(data, aes(x = Mileage, y = Price)) +
+  geom_point(color = "red", alpha = 0.6) +
+  labs(title = "Price vs. Mileage", x = "Mileage (mi)", y = "Price (USD)") +
+  theme_minimal()
+```
+
+# Writing the data
+
+```{r}
+write.csv(data, "processed_used_cars.csv", row.names = FALSE)
+```
+
