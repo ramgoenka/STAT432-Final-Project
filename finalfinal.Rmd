@@ -8,13 +8,14 @@ header-includes:
   - \usepackage{sectsty}
   - \sectionfont{\color{purple}}  # Change section title color
   - \subsectionfont{\color{red}}  # Change subsection title color (optional)
+  - \usepackage{float}
 ---
 
 # Project Description and Abstract
 
-Note: We have set up a GitHub repository with all of our code and data cleaning files and results as well as other codes that might not be included in this report due to length constrains. This repository may be access by clicking [here]. 
+Note: We have set up a GitHub repository with all of our code and data cleaning files and results as well as other codes that might not be included in this report due to length constrains. This repository can be accessed by clicking [\textcolor{blue}{here}](https://github.com/ramgoenka/STAT432-Final-Project). 
 
-This project report was compiled for the submission of the final project for STAT 432 in the Fall 2024 semester at UIUC. Our main and broad goal lies within applying various methods covered during the semester to produce reasonable insights about the [Used Car Price Prediction Dataset](<https://www.kaggle.com/datasets/taeefnajib/used-car-price-prediction-dataset>) to predict the prices of used cars using various features from within the data which include numerical variables such as Model Year, Mileage, Horsepower, Cylinders, Engine size, as well as several categorical variables present. Our goal is to apply what we have learned and while our results might not be the most accurate, we aim to provide a holistic approach to the problem at hand. 
+This project report was compiled for the submission of the final project for STAT 432 in the Fall 2024 semester at UIUC. Our main and broad goal lies within applying various methods covered during the semester to produce reasonable insights about the [\textcolor{blue}{Used Car Price Prediction Dataset}](<https://www.kaggle.com/datasets/taeefnajib/used-car-price-prediction-dataset>) to predict the prices of used cars using various features from within the data which include numerical variables such as Model Year, Mileage, Horsepower, Cylinders, Engine size, as well as several categorical variables present. Our goal is to apply what we have learned and while our results might not be the most accurate, we aim to provide a holistic approach to the problem at hand. 
 
 We have broken our approach into four primary steps:
 \begin{itemize}
@@ -24,17 +25,22 @@ We have broken our approach into four primary steps:
 \item Open Ended Question: We final consider a scenario where a researcher is interested in estimating the original (release) price of the cars in the dataset as if they were new. This question requires extrapolation so we consider some baseline methods such as model types, inflation rates something something...
 \end{itemize}
 
-Results here...
+From our clustering results we have found that, on average, the optimal number of clusters ranges from 4 to 7 across the clustering methods. This range mainly comes from the fact that we utilize different methods with different potential clustervalues as candidates. From our regression results we discover that our models perform satisfactorily with room for improvement as some models. From the output of our models we see varying results from some outputting $R^2$ value in the 0.3 range on the testing data to some reaching upwards of 0.75, showing promising results.
 
 All the text in the report is by the group members solely. AI tools such as ChatGPT and Claude.AI were utilized for the purpose of understanding error messages in R and debugging steps as our code increased in complexity. 
 
-\newpage
-
 # Literature Review
 
-The first paper that we will be reviewing is \textit{"How much is my car worth? A methodology for predicting used cars prices using Random Forest"}. In this paper, the author's propose a machine learning-based approach to predict the used car prices. The author's used the Kaggle dataset for used car price prediction. 
+The first paper that we will be reviewing is \textit{"How much is my car worth? A methodology for predicting used cars prices using Random Forest"}. In this paper, the author's propose a machine learning-based approach to predict the used car prices. The author's used the Kaggle dataset for used car price prediction containing over 370000 entries with 20 attributes. These were then reduced to 10 key features after the initial processing of the data. Important features that were utilized were price, kilometer, brand, and vehicle type. Some irrelevant data such as advertisement names and postal codes were omitted. The data was split into 70% training, 20% testing and 10% cross-validation. Upon doing so, the data was pre-processed yet again to remove unrealistic values and incomplete entries. 
 
-\newpage
+The team then fit a Random Forest model with 500 decision trees selected through grid search. They achieved a 95.82% accuracy on the training set and 83.63% on the testing set. Some of the key variables in the predictions were mileage, brand, and condition of the car. Some of the future directions mentioned were using advanced techniques such as fuzzy logic and genetic algorithms. They also suggest developing an interactive recommendation system to enhance car price estimation. 
+
+The second paper
+
+\textbf{Citations}
+
+- \textcolor{blue}{https://arxiv.org/abs/1711.06970} by Nabarun Pal, Priya Arora, Dhanasekar Sundararaman, Puneet Kohli, Sai Sumanth Palakurthy
+- 
 
 # Data Processing and Summary Statistics 
 
@@ -42,7 +48,7 @@ In this section we will be discussing the data processing steps taken prior to p
 
 STUFF GOES HERE
 
-```{r, echo=FALSE, results='hide', message=FALSE, warning=FALSE, cache = TRUE}
+```{r, echo=FALSE, message=FALSE, warning=FALSE, cache = TRUE, fig.width=6, fig.heigh =3, fig.align='center'}
 library(dplyr)
 library(tidyr)
 library(ggplot2)
@@ -89,30 +95,18 @@ summary_table = data %>%
     Missing_Mileage = mean(is.na(Mileage)) * 100
   )
 
-print(summary_table)
-
 fuel_frequency = data %>%
   group_by(fuel_type) %>%
   summarise(Count = n()) %>%
   mutate(Percentage = (Count / sum(Count)) * 100)
 fuel_frequency
 
-# ggplot(data, aes(x = Price)) +
-#   geom_histogram(binwidth = 5000, fill = "blue", color = "black") +
-#   labs(title = "Price Distribution", x = "Price (USD)", y = "Frequency") +
-#   theme_minimal()
-# 
-# ggplot(data, aes(x = Mileage, y = Price)) +
-#   geom_point(color = "red", alpha = 0.6) +
-#   labs(title = "Price vs. Mileage", x = "Mileage (mi)", y = "Price (USD)") +
-#   theme_minimal()
-
 data = read.csv("processed_used_cars.csv")
 model <- lm(Price ~ ., data = data)
 cooks_dist <- cooks.distance(model)
-# 
-# plot(cooks_dist, main = "Cook's Distance", type = "h", ylab = "Cook's Distance")
-# abline(h = 4 / nrow(data), col = "red", lty = 2) 
+
+plot(cooks_dist, main = "Cook's Distance", type = "h", ylab = "Cook's Distance")
+abline(h = 4 / nrow(data), col = "red", lty = 2)
 threshold <- 4 / nrow(data)
 
 influential_points <- which(cooks_dist > threshold)
@@ -120,8 +114,39 @@ influential_points <- which(cooks_dist > threshold)
 data_cleaned <- data[-influential_points, ]
 write.csv(data_cleaned, "final_data.csv", row.names = FALSE)
 par(mfrow = c(1, 2))
-# boxplot(data$Price, main = "Original Price Data", horizontal = TRUE)
-# boxplot(data_cleaned$Price, main = "Cleaned Price Data", horizontal = TRUE)
+ggplot(data_cleaned, aes(x = Price)) +
+  geom_histogram(binwidth = 5000, fill = "blue", color = "black") +
+  labs(title = "Price Distribution", x = "Price (USD)", y = "Frequency") +
+  theme_minimal()
+
+ggplot(data, aes(x = Mileage, y = Price)) +
+  geom_point(color = "red", alpha = 0.6) +
+  labs(title = "Price vs. Mileage", x = "Mileage (mi)", y = "Price (USD)") +
+  theme_minimal()
+boxplot(data$Price, main = "Original Price Data", horizontal = TRUE)
+boxplot(data_cleaned$Price, main = "Cleaned Price Data", horizontal = TRUE)
+# Load necessary libraries
+# Load necessary library
+library(dplyr)
+
+# Load the dataset
+data <- read.csv("final_data.csv")
+
+# Calculate summary statistics for numeric columns
+numeric_summary <- data %>%
+  select(where(is.numeric)) %>%
+  summarise(across(everything(), list(
+    mean = ~mean(., na.rm = TRUE), 
+    sd = ~sd(., na.rm = TRUE), 
+    min = ~min(., na.rm = TRUE), 
+    max = ~max(., na.rm = TRUE), 
+    median = ~median(., na.rm = TRUE),
+    na_count = ~sum(is.na(.))
+  )))
+
+# Print the summary statistics
+print(numeric_summary)
+
 ```
 
 # Unsupervised Learning
@@ -303,10 +328,331 @@ plot(cv_lasso)
 \hline
 \textbf{Metric}          & \textbf{Training} & \textbf{Test} \\ \hline
 RMSE                     & 21854.21          & 59611.71      \\ \hline
+MAE                      & 11380.49             & 15649.15        \\ \hline
 R-squared                & 0.872             & 0.3185        \\ \hline
 \end{tabular}
 \caption{Training and Test Metrics for Lasso}
 \label{tab:metrics}
 \end{table}
+From the output of the code we can see that there is some evidence of overfitting in the Lasso model. While the RMSE show this rather drastically, looking at the MAE provides a slightly different picture since the difference between the testing and training MAE is not significant in the scenario of car price prediction. Since the dataset has a range of car prices present with some outliers present (as noticed in the actual vs predicted prices plot), on average being off by $15700 when testing is not concerningly significant. From the output of the code we also understand that some of the more predictive variables are ``transmissionManual, brandBugatti, brandRolls-Royce, transmission8-speed A/T, int_colBrandy`` which are all categorical, which is interesting as it seems like the price of the car is influenced more by the brand and the type of transmission. This also makes sense as some of the brands listed are considered luxury brands.
+
+\textbf{k-Nearest Neighbors}: We use the ``caret`` and ``FNN`` package for the implementation. The distance metric used was Euclidean distance which is the default in the ``knn.reg``. Categorical variables were converted to dummy variables and split of 80% train and 20% test was used. We considered $k = 1, 3, 5, 7, 9, 11, 13, 15, 17, 19$ and used 5-fold cross-validation. For each fold we split training data into temporary train sets and fit k-NN with the current k value and calculate the RMSE and average the RMSE across all folds for each k. Once the optimal $k$ value is chosen, a final model is fitted with it and the performance metrics are outputted.
+```{r, cache=TRUE, message=FALSE, fig.width=4, fig.height=4, fig.align='center', echo = FALSE, warning = FALSE}
+library(caret)
+library(FNN)
+
+data_cleaned <- read.csv("final_data.csv")
+
+categorical_vars <- c("brand", "model", "fuel_type", "transmission", 
+                     "ext_col", "int_col", "accident", "clean_title")
+numeric_vars <- c("Horsepower", "Engine_Size", 
+                  "Cylinders", "Mileage", "model_year")
+
+dummy_data <- dummyVars("~.", data = data_cleaned[categorical_vars])
+categorical_dummy <- predict(dummy_data, data_cleaned[categorical_vars])
+
+numeric_scaled <- scale(data_cleaned[numeric_vars])
+X <- cbind(categorical_dummy, numeric_scaled)
+y <- df$Price
+
+set.seed(123)
+train_index <- createDataPartition(y, p = 0.8, list = FALSE)
+X_train <- X[train_index,]
+X_test <- X[-train_index,]
+y_train <- y[train_index]
+y_test <- y[-train_index]
+
+rmse <- function(actual, predicted) {
+    sqrt(mean((actual - predicted)^2))
+}
+
+r2_score <- function(actual, predicted) {
+    1 - sum((actual - predicted)^2)/sum((actual - mean(actual))^2)
+}
+
+k_values <- c(1, 3, 5, 7, 9, 11, 13, 15, 17, 19)
+cv_folds <- 5
+
+cv_results <- data.frame(k = k_values, cv_rmse = NA)
+
+set.seed(123)
+folds <- createFolds(y_train, k = cv_folds)
+
+for (k in k_values) {
+    cv_errors <- numeric(cv_folds)
+    for (i in 1:cv_folds) {
+        val_indices <- folds[[i]]
+        X_cv_train <- X_train[-val_indices,]
+        y_cv_train <- y_train[-val_indices]
+        X_cv_val <- X_train[val_indices,]
+        y_cv_val <- y_train[val_indices]
+        
+        pred <- knn.reg(train = X_cv_train, 
+                       test = X_cv_val, y = y_cv_train,
+                       k = k)$pred
+        cv_errors[i] <- rmse(y_cv_val, pred)
+    }
+    cv_results$cv_rmse[cv_results$k == k] <- mean(cv_errors)
+}
+
+plot(cv_results$k, cv_results$cv_rmse,
+     type = "b", xlab = "k", ylab = "Cross-validation RMSE",
+     main = "Cross-validation Error vs k")
+
+optimal_k <- k_values[which.min(cv_results$cv_rmse)]
+```
+```{r, echo = FALSE, fig.width=5, fig.height=3, cache = TRUE, fig.align = 'center'}
+library(caret)
+library(FNN)
+
+data_cleaned <- read.csv("final_data.csv")
+
+categorical_vars <- c("brand", "model", "fuel_type", "transmission", 
+                     "ext_col", "int_col", "accident", "clean_title")
+numeric_vars <- c("Horsepower", "Engine_Size", 
+                  "Cylinders", "Mileage", "model_year")
+
+dummy_data <- dummyVars("~.", data = data_cleaned[categorical_vars])
+categorical_dummy <- predict(dummy_data, data_cleaned[categorical_vars])
+
+numeric_scaled <- scale(data_cleaned[numeric_vars])
+X <- cbind(categorical_dummy, numeric_scaled)
+y <- df$Price
+
+set.seed(123)
+train_index <- createDataPartition(y, p = 0.8, list = FALSE)
+X_train <- X[train_index,]
+X_test <- X[-train_index,]
+y_train <- y[train_index]
+y_test <- y[-train_index]
+
+rmse <- function(actual, predicted) {
+    sqrt(mean((actual - predicted)^2))
+}
+
+r2_score <- function(actual, predicted) {
+    1 - sum((actual - predicted)^2)/sum((actual - mean(actual))^2)
+}
+
+k_values <- c(1, 3, 5, 7, 9, 11, 13, 15, 17, 19)
+cv_folds <- 5
+
+cv_results <- data.frame(k = k_values, cv_rmse = NA)
+
+set.seed(123)
+folds <- createFolds(y_train, k = cv_folds)
+
+for (k in k_values) {
+    cv_errors <- numeric(cv_folds)
+    for (i in 1:cv_folds) {
+        val_indices <- folds[[i]]
+        X_cv_train <- X_train[-val_indices,]
+        y_cv_train <- y_train[-val_indices]
+        X_cv_val <- X_train[val_indices,]
+        y_cv_val <- y_train[val_indices]
+        
+        pred <- knn.reg(train = X_cv_train, 
+                       test = X_cv_val, y = y_cv_train,
+                       k = k)$pred
+        cv_errors[i] <- rmse(y_cv_val, pred)
+    }
+    cv_results$cv_rmse[cv_results$k == k] <- mean(cv_errors)
+}
+
+optimal_k <- k_values[which.min(cv_results$cv_rmse)]
+
+final_pred_train <- knn.reg(train = X_train,
+                           test = X_train, y = y_train,
+                           k = optimal_k)$pred
+
+final_pred_test <- knn.reg(train = X_train,
+                          test = X_test, y = y_train,
+                          k = optimal_k)$pred
+
+
+train_rmse <- rmse(y_train, final_pred_train)
+test_rmse <- rmse(y_test, final_pred_test)
+train_r2 <- r2_score(y_train, final_pred_train)
+test_r2 <- r2_score(y_test, final_pred_test)
+par(mfrow=c(1,2))
+par(mar = c(4, 4, 2.5, 0)) 
+plot(final_pred_train, y_train - final_pred_train,
+     xlab = "Predicted Values", ylab = "Residuals",
+     main = "Training Residuals")
+abline(h = 0, col = "red")
+plot(final_pred_test, y_test - final_pred_test,
+     xlab = "Predicted Values", ylab = "Residuals",
+     main = "Test Residuals")
+abline(h = 0, col = "red")
+```
+\begin{table}[h!]
+\centering
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Metric}          & \textbf{Training} & \textbf{Test} \\ \hline
+RMSE                     & 29729.66          & 55681.25      \\ \hline
+R-squared                & 0.7630653             & 0.4053715        \\ \hline
+\end{tabular}
+\caption{Training and Test Metrics for k-NN}
+\label{tab:METRICS}
+\end{table}
+From the output of the code and observing the plots, we see that $k = 3$ is the optimal $k$ value. The final model for k-NN with the optimal $k$ performs ok. From the RMSE there is evidence of some overfitting however if we compare the results of k-NN to that of Lasso, the test RMSE and $R^2$ are better which shows that k-NN performs better on unseen data. This theoretically is also in line as k-NN makes predictions in a local neighborhood. FOr example similar cars (brand) tend to be priced similarly. And since brand is one of the key predictive variables, this allows k-NN to perform better on unseen data. Since the k-NN model uses Euclidiean distance as a metric, it might have had a harder time to distinguish some clusters that showed overlaps, resulting in a medicore performance overall.
+
+\textbf{XGBoost}: XGBoost is so cool. something something something something something something something something something something something something something something something something. 
+```{r, fig.align='center', fig.width=7, fig.height=3, echo = FALSE, warning=FALSE, message=FALSE, results = 'hide'}
+set.seed(432)
+library(xgboost)
+data_cleaned <- read.csv("final_data.csv")
+categorical_columns = c("brand", "model", "fuel_type", "transmission", "ext_col", "int_col", "accident", "clean_title")
+for (col in categorical_columns) {
+    data_cleaned[[col]] = as.numeric(as.factor(data_cleaned[[col]]))
+}
+
+
+train_indices = sample(x = 1:dim(data_cleaned)[1], size = floor(0.75*dim(data_cleaned)[1]))
+train = data_cleaned[train_indices,]
+test = data_cleaned[-train_indices,]
+
+train_y = train$Price
+test_y = test$Price
+
+train_X = as.matrix(train[, !names(train) %in% c("Price")])
+test_X = as.matrix(test[, !names(test) %in% c("Price")])
+
+dtrain = xgb.DMatrix(data = train_X, label = train_y)
+dtest = xgb.DMatrix(data = test_X, label = test_y)
+
+set.seed(432)
+params <- list(
+    booster = "gbtree",
+    objective = "reg:squarederror",
+    eta = 0.1,                    
+    max_depth = 7,
+    subsample = 0.8,
+    colsample_bytree = 0.8
+)
+
+xgb_model = xgb.train(
+    params = params,
+    data = dtrain,
+    nrounds = 500,
+    watchlist = list(train = dtrain, test = dtest),
+    print_every_n = 10,
+    early_stopping_rounds = 10
+)
+
+train_pred <- predict(xgb_model, dtrain)
+test_pred <- predict(xgb_model, dtest)
+rmse <- function(actual, predicted) {
+  sqrt(mean((actual - predicted)^2))
+}
+
+# Calculate RMSE
+train_rmse <- rmse(train_y, train_pred)
+test_rmse <- rmse(test_y, test_pred)
+
+rsquared <- function(actual, predicted) {
+  1 - (sum((actual - predicted)^2) / sum((actual - mean(actual))^2))
+}
+
+# Calculate R-squared
+train_r2 <- rsquared(train_y, train_pred)
+test_r2 <- rsquared(test_y, test_pred)
+```
+```{r, fig.align='center', fig.width=7, fig.height=3, echo = FALSE, warning=FALSE, message=FALSE}
+par(mar = c(4, 4, 0, 0)) 
+importance_matrix <- xgb.importance(feature_names = colnames(train_X), model = xgb_model)
+xgb.plot.importance(importance_matrix)
+```
+\begin{table}[h!]
+\centering
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Metric}          & \textbf{Training} & \textbf{Test} \\ \hline
+RMSE                     & 7947.636          & 22090.39      \\ \hline
+R-squared                & 0.9866007             & 0.75112638
+        \\ \hline
+\end{tabular}
+\caption{Training and Test Metrics for k-NN}
+\label{tab:MET}
+\end{table}
+From the output of the XGBoost code, we can instantly see that this model outperforms the previous Lasso and k-NN models significantly. The model has high $R^2$ on the training set and a reasonably high $R^2$ on the testing set, with much lower RMSE on the train and test dataset compared to other models. Another observation is that the XGBoost method utilizes heavily the numeric variables as well as some categorical variables as can be seen from the plot which marks which variables are deemed important by XGBoost. 
+
+\textbf{(Single) Regression Tree}: Regression Tree is so cool. something something something something something something something something something something something something something something something something. 
+```{r}
+
+```
+results 
+
+\textbf{Support Vector Regression}: For the implementation of the 
+```{r, fig.align='center', fig.width=7, fig.height=3, echo = FALSE, warning=FALSE, message=FALSE, results = 'hide', cache = TRUE}
+library(caret)
+library(e1071)
+library(dplyr)
+library(ggplot2)
+library(kernlab)
+data <- read.csv("final_data.csv", stringsAsFactors = TRUE)
+data$fuel_type[is.na(data$fuel_type)] <- "Unknown"
+data$accident[is.na(data$accident)] <- "Unknown"
+selected_cats <- c("brand", "fuel_type", "transmission", "accident", "clean_title")
+data_selected <- data %>%
+  select(all_of(selected_cats),
+         model_year, Horsepower, Engine_Size, Cylinders, Mileage, Price)
+data_selected[selected_cats] <- lapply(data_selected[selected_cats], as.factor)
+dummy_vars <- dummyVars(" ~ .", data = data_selected[, !names(data_selected) %in% c("Price")])
+data_encoded <- predict(dummy_vars, newdata = data_selected)
+data_encoded <- as.data.frame(data_encoded)
+data_encoded$Price <- data_selected$Price
+num_vars <- c("model_year", "Horsepower", "Engine_Size", "Cylinders", "Mileage")
+data_encoded[num_vars] <- scale(data_encoded[num_vars])
+set.seed(123)
+train_index <- createDataPartition(data_encoded$Price, p = 0.8, list = FALSE)
+train_data <- data_encoded[train_index, ]
+test_data <- data_encoded[-train_index, ]
+tuning_grid <- expand.grid(
+  C = c(0.1, 1),        
+  sigma = c(0.01, 0.1)  
+)
+
+ctrl <- trainControl(
+  method = "cv",
+  number = 5,
+  verboseIter = TRUE
+)
+
+svr_model <- train(
+  Price ~ .,
+  data = train_data,
+  method = "svmRadial",
+  trControl = ctrl,
+  tuneGrid = tuning_grid,
+  metric = "RMSE"
+)
+print(svr_model)
+predictions <- predict(svr_model, test_data)
+rmse <- sqrt(mean((test_data$Price - predictions)^2))
+r2 <- 1 - sum((test_data$Price - predictions)^2) /
+         sum((test_data$Price - mean(test_data$Price))^2)
+importance <- varImp(svr_model)
+importance_df <- data.frame(
+  Feature = rownames(importance$importance),
+  Importance = importance$importance$Overall
+)
+importance_df <- importance_df[order(-importance_df$Importance), ]
+```
+
+```{r, echo=FALSE, fig.align='center', out.width='80%'}
+knitr::include_graphics("m.png")
+```
+Upon analyzing the results of multiple runs from the SVR code, the best chosen sigma value was 0.1 and the best chosen C value was 1. These produced a testing RMSE of 60512.02 with an $R^2$ of 0.2448565 and a MAE value of 26055.05
+
+# Open Ended Question
+
+For the open ended question we implement a Random Forest model.
+```{r}
+
+```
+
+# Apendix
 
 
